@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>AMM Quiz Full</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f4f7fb;max-width:1000px;margin:auto;padding:20px}
+.header{background:#0057d9;color:#fff;text-align:center;padding:18px;border-radius:15px;font-size:30px;font-weight:bold}
+.card{background:#fff;padding:20px;border-radius:15px;margin-top:15px}
+input{padding:10px;font-size:18px;width:120px}
+.progress{height:14px;background:#ddd;border-radius:10px;overflow:hidden}
+.bar{height:100%;width:0;background:#00c853}
+.question{font-size:34px;font-weight:bold;margin:20px 0}
+.answer{width:100%;padding:18px;margin:10px 0;font-size:24px;border:2px solid #ddd;border-radius:14px;background:#fff;text-align:left;cursor:pointer}
+.selected{background:#dbeafe;border-color:#2563eb}
+.correct{background:#d4edda;border-color:#28a745}
+.wrong{background:#f8d7da;border-color:#dc3545}
+#confirmBtn{
+width:280px;
+display:none;
+margin-top:15px;
+padding:14px;
+font-size:20px;
+font-weight:bold;
+background:#16a34a;
+color:white;
+border:none;
+border-radius:14px;
+text-align:center;
+}
+#nextBtn{display:none;float:right;padding:10px 18px;font-size:18px;background:#0057ff;color:#fff;border:none;border-radius:12px}
+.bigBtn{width:100%;padding:16px;font-size:22px;font-weight:bold;border:none;border-radius:14px;color:#fff}
+.home{background:#0057ff}
+.retry{background:#ff9800}
+.score{margin-top:15px;font-size:22px;font-weight:bold}
+</style>
+</head>
+<body>
+
+<div class="header">AMM QUIZ</div>
+
+<div id="startScreen" class="card">
+<h2>Chọn phạm vi câu hỏi</h2>
+Từ câu <input type="number" id="startIndex" value="1">
+Đến câu <input type="number" id="endIndex" value="100">
+<br><br>
+<button class="bigBtn home" onclick="startQuiz()">Bắt đầu</button>
+</div>
+
+<div id="quizArea" style="display:none">
+<div class="progress"><div id="bar" class="bar"></div></div>
+<div id="questionNumber"></div>
+<div id="question" class="question"></div>
+<div id="answers"></div>
+
+<button id="confirmBtn" onclick="confirmAnswer()">✓ XÁC NHẬN ĐÁP ÁN</button>
+<button id="nextBtn" onclick="nextQuestion()">Câu tiếp →</button>
+
+<div id="result" style="clear:both;padding-top:15px;font-size:28px;font-weight:bold"></div>
+
+<div class="score">
+Đúng: <span id="correct">0</span> |
+Sai: <span id="wrong">0</span>
+</div>
+</div>
+
+<script src="questions.js"></script>
+<script>
+let allQuestions=[...questions];
+let current=0,correct=0,wrong=0;
+let selectedAnswer=null;
+let wrongQuestions=[];
+
+function shuffle(a){
+ for(let i=a.length-1;i>0;i--){
+  let j=Math.floor(Math.random()*(i+1));
+  [a[i],a[j]]=[a[j],a[i]];
+ }
+ return a;
+}
+
+function shuffleQuestion(q){
+ let arr=q.answers.map((t,i)=>({text:t,ok:i===q.correct}));
+ shuffle(arr);
+ q.answers=arr.map(x=>x.text);
+ q.correct=arr.findIndex(x=>x.ok);
+ return q;
+}
+
+function startQuiz(){
+ let s=parseInt(document.getElementById('startIndex').value)||1;
+ let e=parseInt(document.getElementById('endIndex').value)||allQuestions.length;
+
+ if(s<1)s=1;
+ if(e>allQuestions.length)e=allQuestions.length;
+ if(s>e){alert('Khoảng câu hỏi không hợp lệ');return;}
+
+ questions=allQuestions.slice(s-1,e).map(q=>shuffleQuestion({...q}));
+ shuffle(questions);
+
+ current=0;correct=0;wrong=0;
+ wrongQuestions=[];
+
+ document.getElementById('correct').innerText=0;
+ document.getElementById('wrong').innerText=0;
+
+ document.getElementById('startScreen').style.display='none';
+ document.getElementById('quizArea').style.display='block';
+
+ loadQuestion();
+}
+
+function loadQuestion(){
+ let q=questions[current];
+
+ document.getElementById('questionNumber').innerHTML=`Câu ${current+1}/${questions.length}`;
+ document.getElementById('question').innerHTML=q.question;
+
+ let html='';
+ q.answers.forEach((a,i)=>{
+  html+=`<button class="answer" onclick="selectAnswer(${i})">${String.fromCharCode(65+i)}. ${a}</button>`;
+ });
+ document.getElementById('answers').innerHTML=html;
+
+ selectedAnswer=null;
+ document.getElementById('result').innerHTML='';
+ document.getElementById('confirmBtn').style.display='none';
+ document.getElementById('nextBtn').style.display='none';
+
+ document.getElementById('bar').style.width=((current+1)/questions.length*100)+'%';
+}
+
+function selectAnswer(i){
+ selectedAnswer=i;
+ document.querySelectorAll('.answer').forEach(x=>x.classList.remove('selected'));
+ document.querySelectorAll('.answer')[i].classList.add('selected');
+ document.getElementById('confirmBtn').style.display='block';
+}
+
+function confirmAnswer(){
+ if(selectedAnswer===null){alert('Hãy chọn đáp án');return;}
+
+ let q=questions[current];
+ let btns=document.querySelectorAll('.answer');
+
+ btns.forEach(x=>x.disabled=true);
+
+ if(selectedAnswer===q.correct){
+  btns[q.correct].classList.add('correct');
+  correct++;
+  document.getElementById('result').innerHTML='✅ Chính xác';
+ }else{
+  btns[selectedAnswer].classList.add('wrong');
+  btns[q.correct].classList.add('correct');
+  wrong++;
+  if(!wrongQuestions.some(x=>x.question===q.question)) wrongQuestions.push(q);
+  document.getElementById('result').innerHTML='❌ Sai';
+ }
+
+ document.getElementById('correct').innerText=correct;
+ document.getElementById('wrong').innerText=wrong;
+
+ document.getElementById('confirmBtn').style.display='none';
+ document.getElementById('nextBtn').style.display='block';
+}
+
+function nextQuestion(){
+ current++;
+ if(current>=questions.length){
+   finishQuiz();
+ }else{
+   loadQuestion();
+ }
+}
+
+function finishQuiz(){
+ let html='<h2>🎉 Hoàn thành bài kiểm tra</h2>';
+
+ if(wrongQuestions.length>0){
+   html+=`<button class="bigBtn retry" onclick="retryWrong()">↻ Làm lại ${wrongQuestions.length} câu sai</button><br><br>`;
+ }else{
+   html+='<h3>100% Chính xác 🎉</h3>';
+ }
+
+ html+=`<button class="bigBtn home" onclick="goHome()">🏠 Về trang chủ</button>`;
+
+ document.getElementById('question').innerHTML=html;
+ document.getElementById('answers').innerHTML='';
+ document.getElementById('questionNumber').innerHTML='';
+ document.getElementById('result').innerHTML='';
+ document.getElementById('confirmBtn').style.display='none';
+ document.getElementById('nextBtn').style.display='none';
+}
+
+function retryWrong(){
+ questions=wrongQuestions.map(q=>shuffleQuestion({...q}));
+ shuffle(questions);
+
+ wrongQuestions=[];
+ current=0;
+ correct=0;
+ wrong=0;
+
+ document.getElementById('correct').innerText=0;
+ document.getElementById('wrong').innerText=0;
+
+ loadQuestion();
+}
+
+function goHome(){
+ document.getElementById('quizArea').style.display='none';
+ document.getElementById('startScreen').style.display='block';
+}
+</script>
+</body>
+</html>
